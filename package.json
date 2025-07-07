@@ -1,0 +1,12 @@
+{
+  "name": "mrtinhios/admin-firebase",
+  "description": "Admin duyệt tài khoản Firebase bằng PHP",
+  "require": {
+    "kreait/firebase-php": "^7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "": "src/"
+    }
+  }
+}
