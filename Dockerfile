@@ -1,18 +1,17 @@
 FROM php:8.2-apache
 
-# Cài các extension cần thiết
-RUN docker-php-ext-install mysqli pdo pdo_mysql
+RUN apt-get update && apt-get install -y \
+    libzip-dev zip unzip git \
+    && docker-php-ext-install zip
 
-# Cài Composer
+# Cài composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy source vào container
-COPY . /var/www/html/
+# Copy code
+COPY . /var/www/html
+WORKDIR /var/www/html
 
-# Phân quyền
-RUN chown -R www-data:www-data /var/www/html/
+# Cài thư viện PHP
+RUN composer install --no-dev --optimize-autoloader
 
-# Bật mod_rewrite nếu cần
 RUN a2enmod rewrite
-
-EXPOSE 80
