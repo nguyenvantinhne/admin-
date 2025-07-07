@@ -1,18 +1,16 @@
 <?php
-require_once __DIR__ . '/vendor/autoload.php'; // Đường dẫn đến autoload của Firebase
+require_once __DIR__ . '/vendor/autoload.php';
 
 use Kreait\Firebase\Factory;
-use Kreait\Firebase\ServiceAccount;
 
-// Khởi tạo Firebase
-$serviceAccount = ServiceAccount::fromJsonFile(__DIR__.'/serviceAccountKey.json');
+// Firebase mới không dùng ServiceAccount::fromJsonFile
 $firebase = (new Factory)
-    ->withServiceAccount($serviceAccount)
+    ->withServiceAccount(__DIR__ . '/serviceAccountKey.json')
     ->create();
 
 $db = $firebase->getFirestore();
 
-// Xử lý duyệt tài khoản
+// Duyệt
 if (isset($_POST['approve'])) {
     $userId = $_POST['userId'];
     $db->collection('users')->document($userId)->update([
@@ -21,147 +19,108 @@ if (isset($_POST['approve'])) {
     ]);
 }
 
-// Xử lý từ chối tài khoản
+// Từ chối
 if (isset($_POST['reject'])) {
     $userId = $_POST['userId'];
     $db->collection('users')->document($userId)->delete();
 }
 
-// Lấy danh sách tài khoản chờ duyệt
+// Danh sách chờ duyệt
 $users = $db->collection('users')
     ->where('approved', '==', false)
     ->documents();
 ?>
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Duyệt Tài Khoản</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Duyệt Tài Khoản</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .gradient-bg {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    }
+  </style>
 </head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="gradient-bg text-white shadow-lg">
-            <div class="container mx-auto px-4 py-6">
-                <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold">MrTính iOS - Admin Panel</h1>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-sm">Xin chào, Admin</span>
-                        <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition">
-                            <i class="fas fa-sign-out-alt"></i> Đăng xuất
-                        </button>
-                    </div>
+<body class="bg-gray-100 text-gray-800">
+  <div class="min-h-screen flex flex-col">
+    <header class="gradient-bg text-white py-5 px-4 shadow">
+      <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-2xl font-bold"><i class="fas fa-user-shield mr-2"></i>MrTính iOS - Admin Panel</h1>
+        <button class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded shadow flex items-center">
+          <i class="fas fa-sign-out-alt mr-2"></i> Đăng xuất
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 container mx-auto px-4 py-8">
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <h2 class="text-xl font-semibold mb-6 flex items-center">
+          <i class="fas fa-user-clock mr-2 text-blue-600"></i> Danh sách tài khoản chờ duyệt
+        </h2>
+
+        <?php if ($users->isEmpty()): ?>
+          <div class="text-center py-10 text-gray-600">
+            <i class="fas fa-check-circle text-green-500 text-4xl mb-2"></i>
+            <p>Không có tài khoản nào đang chờ duyệt</p>
+          </div>
+        <?php else: ?>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <?php foreach ($users as $user): $data = $user->data(); ?>
+              <div class="card-hover bg-white border rounded-lg p-5 shadow transition">
+                <div class="mb-3 flex items-center">
+                  <div class="bg-blue-100 text-blue-600 p-3 rounded-full mr-4">
+                    <i class="fas fa-user text-lg"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-bold"><?= htmlspecialchars($data['name'] ?? 'Không có tên') ?></h3>
+                    <p class="text-sm text-gray-500"><?= htmlspecialchars($data['email'] ?? '') ?></p>
+                  </div>
                 </div>
-            </div>
-        </header>
+                <p class="text-sm mb-1"><strong>Thời gian đăng ký:</strong> <?= isset($data['createdAt']) ? $data['createdAt']->format('d/m/Y H:i') : 'N/A' ?></p>
+                <p class="text-sm mb-4"><strong>Device ID:</strong> <?= htmlspecialchars($data['deviceId'] ?? 'N/A') ?></p>
 
-        <!-- Main Content -->
-        <main class="container mx-auto px-4 py-8">
-            <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                <div class="p-6">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-6">
-                        <i class="fas fa-user-clock mr-2"></i> Danh sách tài khoản chờ duyệt
-                    </h2>
-                    
-                    <?php if ($users->isEmpty()): ?>
-                        <div class="text-center py-12">
-                            <i class="fas fa-check-circle text-4xl text-green-500 mb-4"></i>
-                            <p class="text-gray-600">Không có tài khoản nào chờ duyệt</p>
-                        </div>
-                    <?php else: ?>
-                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <?php foreach ($users as $user): ?>
-                                <?php $userData = $user->data(); ?>
-                                <div class="card-hover bg-white border border-gray-200 rounded-lg shadow transition duration-300">
-                                    <div class="p-6">
-                                        <div class="flex items-center mb-4">
-                                            <div class="bg-blue-100 text-blue-800 rounded-full p-3 mr-4">
-                                                <i class="fas fa-user text-xl"></i>
-                                            </div>
-                                            <div>
-                                                <h3 class="font-bold text-lg"><?= htmlspecialchars($userData['name'] ?? 'Không có tên') ?></h3>
-                                                <p class="text-gray-600 text-sm"><?= htmlspecialchars($userData['email']) ?></p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="space-y-2 mb-4">
-                                            <p class="text-sm">
-                                                <span class="font-medium">Đăng ký lúc:</span> 
-                                                <?= isset($userData['createdAt']) ? $userData['createdAt']->format('d/m/Y H:i') : 'N/A' ?>
-                                            </p>
-                                            <p class="text-sm">
-                                                <span class="font-medium">Device ID:</span> 
-                                                <?= htmlspecialchars($userData['deviceId'] ?? 'N/A') ?>
-                                            </p>
-                                        </div>
-                                        
-                                        <div class="flex space-x-2">
-                                            <form method="post" class="flex-1">
-                                                <input type="hidden" name="userId" value="<?= $user->id() ?>">
-                                                <button type="submit" name="approve" 
-                                                    class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
-                                                    <i class="fas fa-check mr-2"></i> Duyệt
-                                                </button>
-                                            </form>
-                                            <form method="post" class="flex-1">
-                                                <input type="hidden" name="userId" value="<?= $user->id() ?>">
-                                                <button type="submit" name="reject" 
-                                                    class="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
-                                                    <i class="fas fa-times mr-2"></i> Từ chối
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
+                <div class="flex space-x-2">
+                  <form method="post" class="flex-1">
+                    <input type="hidden" name="userId" value="<?= $user->id() ?>">
+                    <button name="approve" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded flex items-center justify-center">
+                      <i class="fas fa-check mr-2"></i> Duyệt
+                    </button>
+                  </form>
+                  <form method="post" class="flex-1">
+                    <input type="hidden" name="userId" value="<?= $user->id() ?>">
+                    <button name="reject" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded flex items-center justify-center">
+                      <i class="fas fa-times mr-2"></i> Từ chối
+                    </button>
+                  </form>
                 </div>
-            </div>
-        </main>
-
-        <!-- Footer -->
-        <footer class="bg-gray-800 text-white py-6 mt-12">
-            <div class="container mx-auto px-4 text-center">
-                <p>© 2023 MrTính iOS - Tool Game Tài Xíu Uy Tín</p>
-                <p class="text-sm text-gray-400 mt-2">Phiên bản Admin 1.0.0</p>
-            </div>
-        </footer>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        // Hiển thị thông báo khi duyệt/từ chối
-        <?php if (isset($_POST['approve'])): ?>
-            Swal.fire({
-                icon: 'success',
-                title: 'Đã duyệt tài khoản!',
-                showConfirmButton: false,
-                timer: 1500
-            });
-            setTimeout(() => window.location.reload(), 1500);
-        <?php elseif (isset($_POST['reject'])): ?>
-            Swal.fire({
-                icon: 'success',
-                title: 'Đã từ chối tài khoản!',
-                showConfirmButton: false,
-                timer: 1500
-            });
-            setTimeout(() => window.location.reload(), 1500);
+              </div>
+            <?php endforeach; ?>
+          </div>
         <?php endif; ?>
-    </script>
+      </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-4 text-center text-sm">
+      © 2025 MrTính iOS - Phiên bản Admin 1.0
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    <?php if (isset($_POST['approve'])): ?>
+    Swal.fire({ icon: 'success', title: 'Đã duyệt tài khoản!', showConfirmButton: false, timer: 1500 });
+    setTimeout(() => location.href = location.href, 1500);
+    <?php elseif (isset($_POST['reject'])): ?>
+    Swal.fire({ icon: 'success', title: 'Đã từ chối tài khoản!', showConfirmButton: false, timer: 1500 });
+    setTimeout(() => location.href = location.href, 1500);
+    <?php endif; ?>
+  </script>
 </body>
-</html>
+    </html>
