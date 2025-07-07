@@ -1,0 +1,7 @@
+{
+  "name": "mrtinh/admin-duyet",
+  "description": "Duyệt tài khoản Firebase với PHP",
+  "require": {
+    "kreait/firebase-php": "^7.0"
+  }
+}
